@@ -5,7 +5,11 @@
       :showForm="showForm"
       title="Task Tracker"
     />
-    <Form v-if="showForm" @add-task="addTask" />
+    <transition name="slide">
+      <Form v-if="showForm" @add-task="addTask" />
+    </transition>
+  </div>
+  <div class="container">
     <Tasks
       @delete-task="deleteTask"
       @toggle-reminder="toggleReminder"
@@ -39,45 +43,64 @@ export default {
       this.showForm = !this.showForm;
     },
 
-    deleteTask(id) {
+    async deleteTask(id) {
       if (confirm("Are you sure")) {
+        const res = await fetch(`api/tasks/${id}`, {
+          method: "DELETE",
+        });
+        const data = await res.json();
         this.tasks = this.tasks.filter((task) => task.id != id);
       }
     },
 
-    toggleReminder(id) {
+    async toggleReminder(id) {
+      const tasktoUpdate = await this.fetchTask(id);
+      const updatedTask = { ...tasktoUpdate, reminder: !tasktoUpdate.reminder };
+
+      const res = await fetch(`api/tasks/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(updatedTask),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await res.json();
       this.tasks = this.tasks.map((task) =>
-        task.id == id ? { ...task, reminder: !task.reminder } : task
+        task.id == id ? { ...task, reminder: data.reminder } : task
       );
     },
 
-    addTask(newTask) {
-      this.tasks = [...this.tasks, newTask];
-      console.log(this.tasks);
+    async addTask(newTask) {
+      const res = await fetch("api/tasks", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newTask),
+      });
+
+      const data = await res.json();
+      this.tasks = [...this.tasks, data];
+    },
+
+    async fetchTasks() {
+      const res = await fetch("api/tasks");
+      const data = await res.json();
+
+      return data;
+    },
+
+    async fetchTask(id) {
+      const res = await fetch(`api/tasks/${id}`);
+      const data = await res.json();
+
+      return data;
     },
   },
 
-  created() {
-    this.tasks = [
-      {
-        id: "1",
-        text: "Doctors Appointment",
-        day: "March 5th at 2:30pm",
-        reminder: true,
-      },
-      {
-        id: "2",
-        text: "Meeting with boss",
-        day: "March 6th at 1:30pm",
-        reminder: true,
-      },
-      {
-        id: "3",
-        text: "Food shopping",
-        day: "March 7th at 2:00pm",
-        reminder: false,
-      },
-    ];
+  async created() {
+    this.tasks = await this.fetchTasks();
   },
 };
 </script>
@@ -95,11 +118,15 @@ body {
 .container {
   max-width: 500px;
   margin: 30px auto;
+  margin-bottom: 0;
   overflow: auto;
-  min-height: 300px;
+  /* min-height: 300px; */
   border: 1px solid steelblue;
   padding: 30px;
   border-radius: 5px;
+}
+.container:last-child {
+  margin: 20px auto;
 }
 .btn {
   display: inline-block;
@@ -123,5 +150,15 @@ body {
 .btn-block {
   display: block;
   width: 100%;
+}
+/* Style by chatGPT} */
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.3s ease;
+}
+.slide-enter,
+.slide-leave-to {
+  transform: translateY(-20px);
+  opacity: 0;
 }
 </style>

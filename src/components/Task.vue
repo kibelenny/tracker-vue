@@ -29,6 +29,7 @@ export default {
 }
 .task.reminder {
   border-left: 5px solid green;
+  background-color: #ebf3eb;
 }
 .task h3 {
   display: flex;
